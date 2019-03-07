@@ -123,6 +123,7 @@ void loop() {
     Serial.println("new client");           // print a message out the serial port
     String currentLine = "";                // make a String to hold incoming data from the client
     while (client.connected()) {            // loop while the client's connected
+      Serial.println("beginnign");
 
 
       //        char c = client.read();             // read a byte, then
@@ -149,19 +150,22 @@ void loop() {
       // break out of the while loop:
 
 
-//Handle incomplete or empty currentLines in such a way that no function gets triggered with it.
+      //Handle incomplete or empty currentLines in such a way that no function gets triggered with it.
       int time_a = micros();
       int time_limit =  100000;
-      while (client.connected() && micros() - time_a < time_limit) {
+      while (micros() - time_a < time_limit) {
         if (client.available()) {
           char c = client.read();
           currentLine += c;
         }
       }
+      Serial.println(currentLine);
+
       URL = findURL(currentLine);
       QueryKey = findQuery_key(currentLine);
-      
 
+      Serial.println(URL);
+      Serial.println(QueryKey);
 
 
 
@@ -216,29 +220,55 @@ void loop() {
 
       else if (URL == "turn") {
         keyValue = QueryKey.toInt();   //For now, keyValue is -100 to 100 in % for simplicity
-        if (keyValue > 0) {    //turn right
-          SpeedTurn = Speed - (Speed * keyValue / 100);
-          analogWrite(PWMR_pin, SpeedTurn);
-          
+        if (keyValue >= 0) {    //turn right
+
+          //turning on the spot//
+          if (Speed == 0) {
+
+            analogWrite(PWML_pin, (keyValue * 255 / 100));
+            analogWrite(PWMR_pin, (keyValue * 255 / 100));
+            digitalWrite(DIRL_pin, LOW);
+            digitalWrite(DIRR_pin, HIGH);
+          }
+          else {
+            SpeedTurn = Speed - (Speed * keyValue / 100);
+            analogWrite(PWML_pin, Speed);
+            analogWrite(PWMR_pin, SpeedTurn);
+          }
+
+
           client.println("HTTP/1.1 200 OK");
         }
 
         if (keyValue < 0) {    //turn left
-          
-          SpeedTurn = Speed - (Speed * abs(keyValue) / 100);
-          
-          analogWrite(PWML_pin, SpeedTurn);
+
+          if (Speed == 0) {
+
+            analogWrite(PWML_pin, (abs(keyValue) * 255 / 100));
+            analogWrite(PWMR_pin, (abs(keyValue) * 255 / 100));
+            digitalWrite(DIRL_pin, HIGH);
+            digitalWrite(DIRR_pin, LOW);
+          }
+          else {
+
+            SpeedTurn = Speed - (Speed * abs(keyValue) / 100);
+
+            analogWrite(PWML_pin, SpeedTurn);
+            analogWrite(PWMR_pin, Speed);
+          }
           client.println("HTTP/1.1 200 OK");
         }
 
-        if (keyValue == 0) {    //go straight
-          analogWrite(PWML_pin, Speed);
-          analogWrite(PWMR_pin, Speed);
-          client.println("HTTP/1.1 200 OK");
-        }
+        ////The problem with this is, if you miss zero, the other wheel would still be running at the previous speed
+        //        if (keyValue == 0) {    //go straight
+        //          analogWrite(PWML_pin, Speed);
+        //          analogWrite(PWMR_pin, Speed);
+        //          client.println("HTTP/1.1 200 OK");
+        //        }
 
 
       }
+      Serial.println("end");
 
       break;
 
