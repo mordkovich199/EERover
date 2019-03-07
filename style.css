@@ -5,6 +5,13 @@
   margin-left: 20px;
 }
 
+.slidecontainer2 {
+  width: 30%; /* Width of the outside container */
+  transform: none;
+  margin-top: 300px;
+  margin-left: 460px;
+}
+
 /* The slider itself */
 .slider {
   -webkit-appearance: none;  /* Override default CSS styles */
