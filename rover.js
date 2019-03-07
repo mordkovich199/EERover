@@ -26,9 +26,19 @@ $(document).on('input', '#myRange', function(){
   var speed = this.value * -1;
   var test = Math.abs(speed);
   if (test % 10 == 0){
-  $.get(ip + 'speed/' + speed).done(function(data){
+    console.log(speed);
+    $.get(ip + 'speed/' + speed).done(function(data){
       console.log("drive straight with " + speed);
-  });
-}
+    });
+  }
 });
+
+$(document).on('mouseup', '#myRange', function(){
+this.value = 0;
+$.get(ip + 'speed/' + 0).done(function(data){
+  console.log("drive straight with " + 0);
+});
+
+});
+
 });
