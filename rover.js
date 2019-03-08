@@ -38,7 +38,14 @@ $(document).on('input', '#myRangeVert', function(){
   }
 }
 });
-///try the thing with prevValue, because it seems when you let go of the speed bar and touch it again, the request is snet to drive at the same speed as previous
+
+$('#stop').click(function(){
+  $.get(ip + 'speed/' + 0).done(function(data){
+    console.log("drive straight with " + 0);
+  });
+  });
+
+
 $(document).on('input', '#myRangeHoriz', function(){
   var turn = this.value;
   console.log (turn);
@@ -62,13 +69,13 @@ $.get(ip + 'turn/' + 0).done(function(data){
 
 });
 
-$(document).on('mouseup', '#myRangeVert', function(){
-this.value = 0;
-$.get(ip + 'speed/' + 0).done(function(data){
-  console.log("drive with " + 0);
-});
-
-});
+// $(document).on('mouseup', '#myRangeVert', function(){
+// this.value = 0;
+// $.get(ip + 'speed/' + 0).done(function(data){
+//   console.log("drive with " + 0);
+// });
+//
+// });
 
 // $(document).on('mouseup', '#myRangeVert', function(){
 // this.value = 0;
