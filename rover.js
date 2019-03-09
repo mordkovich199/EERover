@@ -2,6 +2,7 @@ $(function () {
 var ip = "http://192.168.1.1/";
 var prevSpeed = 0;
 var prevTurn = 0;
+var allow = true;
 
 
 
@@ -25,6 +26,8 @@ $.get(ip + 'led/off', function(data){
 
 
 $(document).on('input', '#myRangeVert', function(){
+  if (allow){
+  allow = false;
   var speed = this.value * -1;
   console.log(speed);
   if (prevSpeed != speed){
@@ -37,6 +40,9 @@ $(document).on('input', '#myRangeVert', function(){
     });
   }
 }
+allow = true;
+}
+
 });
 
 $('#stop').click(function(){
@@ -47,6 +53,8 @@ $('#stop').click(function(){
 
 
 $(document).on('input', '#myRangeHoriz', function(){
+  if (allow){
+  allow = false;
   var turn = this.value;
   console.log (turn);
   if (prevTurn != turn){
@@ -59,15 +67,17 @@ $(document).on('input', '#myRangeHoriz', function(){
     });
   }
 }
+allow = true;
+}
 });
 
-$(document).on('mouseup', '#myRangeHoriz', function(){
-this.value = 0;
-$.get(ip + 'turn/' + 0).done(function(data){
-  console.log("turn " + 0);
-});
-
-});
+// $(document).on('mouseup', '#myRangeHoriz', function(){
+// this.value = 0;
+// $.get(ip + 'turn/' + 0).done(function(data){
+//   console.log("turn " + 0);
+// });
+//
+// });
 
 // $(document).on('mouseup', '#myRangeVert', function(){
 // this.value = 0;

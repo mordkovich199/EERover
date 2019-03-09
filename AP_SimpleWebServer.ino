@@ -37,6 +37,7 @@ String QueryKey;
 int keyValue;
 int Speed = 0;
 int SpeedTurn;
+int Turn = 0;
 
 const int PWML_pin = 12;
 const int DIRL_pin = 11;
@@ -48,11 +49,12 @@ WiFiServer server(80);
 
 void setup() {
 
-  //Initialize serial and wait for port to open:
-  //  Serial.begin(9600);
-  while (!Serial) {
-    // wait for serial port to connect. Needed for native USB port only
-  }
+  //Initialize Serial and wait for port to open:
+  Serial.begin(9600);
+
+      while (!Serial) {
+        // wait for Serial port to connect. Needed for native USB port only
+      }
 
   Serial.println("Access Point Web Server");
 
@@ -120,45 +122,29 @@ void loop() {
   WiFiClient client = server.available();   // listen for incoming clients
 
   if (client) {                             // if you get a client,
-    Serial.println("new client");           // print a message out the serial port
+    Serial.println("new client");           // print a message out the Serial port
     String currentLine = "";                // make a String to hold incoming data from the client
     while (client.connected()) {            // loop while the client's connected
       Serial.println("beginnign");
 
 
-      //        char c = client.read();             // read a byte, then
-      //        Serial.write(c);                    // print it out the serial monitor
-      // if the byte is a newline character
-
-      // if the current line is blank, you got two newline characters in a row.
-      // that's the end of the client HTTP request, so send a response:
-
-      //      client.println("HTTP/1.1 200 OK");
-      //      client.println("Content-type:text/html");
-      //      client.println();
-      //
-      //      // the content of the HTTP response follows the header:
-      //      client.println("Click <a href=\"/led/on\">here</a> turn the LED on<br>");
-      //      client.println("Click <a href=\"/led/off\">here</a> turn the LED off<br>");
-      //      client.println("Click <a href=\"/speed/0\">here</a> Stop Driving<br>");
-      //
-      //
-      //      // The HTTP response ends with another blank line:
-      //      client.println();
-
-
-      // break out of the while loop:
-
 
       //Handle incomplete or empty currentLines in such a way that no function gets triggered with it.
       int time_a = micros();
-      int time_limit =  100000;
+      int time_limit =  50000;
       while (micros() - time_a < time_limit) {
         if (client.available()) {
           char c = client.read();
           currentLine += c;
         }
       }
+
+      if (currentLine == " ") {
+        client.println("HTTP/1.1 200 OK");
+        break;
+
+      }
+
       Serial.println(currentLine);
 
       URL = findURL(currentLine);
@@ -174,11 +160,13 @@ void loop() {
       if (URL == "led") {
         if (QueryKey == "on") {
           digitalWrite(led, HIGH);
+          client.println("HTTP/1.1 200 OK");
 
         }
 
         if (QueryKey.endsWith("off")) {
           digitalWrite(led, LOW);
+          client.println("HTTP/1.1 200 OK");
 
         }
 
@@ -186,99 +174,138 @@ void loop() {
       }
 
       else if (URL == "speed") {
-        int keyValue = QueryKey.toInt();
 
-        if (keyValue > 0) {
-          Speed = keyValue;
-          analogWrite(PWML_pin, keyValue);
-          digitalWrite(DIRL_pin, LOW);
-          analogWrite(PWMR_pin, keyValue);
-          digitalWrite(DIRR_pin, LOW);
-          client.println("HTTP/1.1 200 OK");
+        if (isDigit(QueryKey[QueryKey.length() - 1])) {
+          int keyValue = QueryKey.toInt();
+
+          if (keyValue > 0) {
+            digitalWrite(DIRL_pin, LOW);
+            digitalWrite(DIRR_pin, LOW);
+            Speed = keyValue;
+            if (Turn == 0) {
+              analogWrite(PWML_pin, keyValue);
+              analogWrite(PWMR_pin, keyValue);
+
+            }
+            else if (Turn > 0) {
+              SpeedTurn = keyValue - (keyValue * Turn / 100);
+              analogWrite(PWML_pin, keyValue);
+              analogWrite(PWMR_pin, SpeedTurn);
+            }
+            else {
+              SpeedTurn = keyValue - (keyValue * abs(Turn) / 100);
+              analogWrite(PWML_pin, SpeedTurn);
+              analogWrite(PWMR_pin, keyValue);
+
+            }
+          }
+
+          if (keyValue < 0) {
+            digitalWrite(DIRL_pin, HIGH);
+            digitalWrite(DIRR_pin, HIGH);
+            Speed = abs(keyValue);
+
+            if (Turn == 0) {
+              analogWrite(PWML_pin, abs(keyValue));
+              analogWrite(PWMR_pin, abs(keyValue));
+
+            }
+            else if (Turn > 0) {
+              SpeedTurn = abs(keyValue) - (abs(keyValue) * Turn / 100);
+              analogWrite(PWML_pin, abs(keyValue));
+              analogWrite(PWMR_pin, SpeedTurn);
+            }
+            else {
+              SpeedTurn = abs(keyValue) - (abs(keyValue) * abs(Turn) / 100);
+              analogWrite(PWML_pin, SpeedTurn);
+              analogWrite(PWMR_pin, abs(keyValue));
+
+            }
+
+          }
+
+          if (keyValue == 0) {
+            Speed = 0;
+            analogWrite(PWML_pin, 0);
+            analogWrite(PWMR_pin, 0);
+            digitalWrite(DIRL_pin, HIGH);
+            digitalWrite(DIRR_pin, HIGH);
+            client.println("HTTP/1.1 200 OK");
+          }
         }
 
-        if (keyValue < 0) {
-          Speed = abs(keyValue);
-          analogWrite(PWML_pin, abs(keyValue));
-          digitalWrite(DIRL_pin, HIGH);
-          analogWrite(PWMR_pin, abs(keyValue));
-          digitalWrite(DIRR_pin, HIGH);
+        else {
+          analogWrite(PWML_pin, Speed);
+          analogWrite(PWMR_pin, Speed);
           client.println("HTTP/1.1 200 OK");
         }
-
-        if (keyValue == 0) {
-          Speed = 0;
-          analogWrite(PWML_pin, 0);
-          analogWrite(PWMR_pin, 0);
-          digitalWrite(DIRL_pin, HIGH);
-          digitalWrite(DIRR_pin, HIGH);
-          client.println("HTTP/1.1 200 OK");
-        }
-
+        client.println("HTTP/1.1 200 OK");
 
       }
 
       else if (URL == "turn") {
-        keyValue = QueryKey.toInt();   //For now, keyValue is -100 to 100 in % for simplicity
-        if (keyValue >= 0) {    //turn right
+        if (isDigit(QueryKey[QueryKey.length() - 1])) {
+          keyValue = QueryKey.toInt();   //For now, keyValue is -100 to 100 in % for simplicity
+          Turn = keyValue;
+          if (keyValue >= 0) {    //turn right
 
-          //turning on the spot//
-          if (Speed == 0) {
+            //turning on the spot//
+            if (Speed == 0) {
 
-            analogWrite(PWML_pin, (keyValue * 255 / 100));
-            analogWrite(PWMR_pin, (keyValue * 255 / 100));
-            digitalWrite(DIRL_pin, LOW);
-            digitalWrite(DIRR_pin, HIGH);
+              analogWrite(PWML_pin, (keyValue * 255 / 100));
+              analogWrite(PWMR_pin, (keyValue * 255 / 100));
+              digitalWrite(DIRL_pin, LOW);
+              digitalWrite(DIRR_pin, HIGH);
+            }
+            else {
+              SpeedTurn = Speed - (Speed * keyValue / 100);
+              analogWrite(PWML_pin, Speed);
+              analogWrite(PWMR_pin, SpeedTurn);
+            }
+
+
+            client.println("HTTP/1.1 200 OK");
           }
-          else {
-            SpeedTurn = Speed - (Speed * keyValue / 100);
-            analogWrite(PWML_pin, Speed);
-            analogWrite(PWMR_pin, SpeedTurn);
+
+          if (keyValue < 0) {    //turn left
+
+            if (Speed == 0) {
+
+              analogWrite(PWML_pin, (abs(keyValue) * 255 / 100));
+              analogWrite(PWMR_pin, (abs(keyValue) * 255 / 100));
+              digitalWrite(DIRL_pin, HIGH);
+              digitalWrite(DIRR_pin, LOW);
+            }
+            else {
+              SpeedTurn = Speed - (Speed * abs(keyValue) / 100);
+              analogWrite(PWML_pin, SpeedTurn);
+              analogWrite(PWMR_pin, Speed);
+            }
+
           }
 
-
-          client.println("HTTP/1.1 200 OK");
         }
-
-        if (keyValue < 0) {    //turn left
-
-          if (Speed == 0) {
-
-            analogWrite(PWML_pin, (abs(keyValue) * 255 / 100));
-            analogWrite(PWMR_pin, (abs(keyValue) * 255 / 100));
-            digitalWrite(DIRL_pin, HIGH);
-            digitalWrite(DIRR_pin, LOW);
-          }
-          else {
-
-            SpeedTurn = Speed - (Speed * abs(keyValue) / 100);
-
-            analogWrite(PWML_pin, SpeedTurn);
-            analogWrite(PWMR_pin, Speed);
-          }
+        else {
+          Serial.println("unsopported value");
           client.println("HTTP/1.1 200 OK");
+
         }
-
-        ////The problem with this is, if you miss zero, the other wheel would still be running at the previous speed
-        //        if (keyValue == 0) {    //go straight
-        //          analogWrite(PWML_pin, Speed);
-        //          analogWrite(PWMR_pin, Speed);
-        //          client.println("HTTP/1.1 200 OK");
-        //        }
-
-
       }
+
+
       Serial.println("end");
 
       break;
-
     }
     client.stop();
     Serial.println("client disconnected");
   }
-  // close the connection:
+
 
 }
+
+
+
 
 
 
